@@ -60,6 +60,73 @@ main(int argc, char *argv[])
 void
 memdump(char *fmt, char *data, int len)
 {
-  // Your code here.  `data` holds `len` valid bytes.
+  int offset = 0;
 
+  for (; *fmt; fmt++) {
+    switch (*fmt) {
+    case 'c':
+      if (len - offset < (int)sizeof(char))
+        goto not_enough_data;
+      printf("%c\n", data[offset]);
+      offset += sizeof(char);
+      break;
+    case 'h': {
+      ushort value;
+      if (len - offset < (int)sizeof(value))
+        goto not_enough_data;
+      memmove(&value, data + offset, sizeof(value));
+      printf("%d\n", (int)value);
+      offset += sizeof(value);
+      break;
+    }
+    case 'i': {
+      int value;
+      if (len - offset < (int)sizeof(value))
+        goto not_enough_data;
+      memmove(&value, data + offset, sizeof(value));
+      printf("%d\n", value);
+      offset += sizeof(value);
+      break;
+    }
+    case 'p': {
+      uint64 value;
+      if (len - offset < (int)sizeof(value))
+        goto not_enough_data;
+      memmove(&value, data + offset, sizeof(value));
+      printf("%lx\n", value);
+      offset += sizeof(value);
+      break;
+    }
+    case 'S': {
+      int end = offset;
+      while (end < len && data[end] != '\0')
+        end++;
+      for (; offset < end; offset++)
+        printf("%c", data[offset]);
+      if (offset < len)
+        offset++;
+      printf("\n");
+      break;
+    }
+    case 's': {
+      uint64 value;
+      if (len - offset < (int)sizeof(value))
+        goto not_enough_data;
+      memmove(&value, data + offset, sizeof(value));
+      if (value == 0)
+        printf("(null)\n");
+      else
+        printf("%s\n", (char *)value);
+      offset += sizeof(value);
+      break;
+    }
+    default:
+      printf("\n");
+      break;
+    }
+  }
+  return;
+
+not_enough_data:
+  printf("memdump: not enough data\n");
 }
