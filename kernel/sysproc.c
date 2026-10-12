@@ -23,6 +23,28 @@ sys_getpid(void)
 }
 
 uint64
+sys_interpose(void)
+{
+  struct proc *p = myproc();
+  int mask;
+  uint64 path_addr;
+  char path[MAXPATH];
+
+  if (p->interpose_mask != 0)
+    return -1;
+  argint(0, &mask);
+  argaddr(1, &path_addr);
+  if (path_addr == 0) {
+    path[0] = 0;
+  } else if (argstr(1, path, sizeof(path)) < 0) {
+    return -1;
+  }
+  p->interpose_mask = mask;
+  safestrcpy(p->interpose_path, path, sizeof(p->interpose_path));
+  return 0;
+}
+
+uint64
 sys_fork(void)
 {
   return kfork();
