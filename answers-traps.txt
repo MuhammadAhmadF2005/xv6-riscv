@@ -1,0 +1,42 @@
+1. Which registers contain arguments to functions? For example, which register holds 13 in main's call to printf?
+Answer:
+In RISC-V, integer and pointer function arguments are passed in registers a0 through a7 (a0 to a7, which correspond to x10 to x17).
+In main's call to printf ("printf("%d %d\n", f(8) + 1, 13);"), register a2 holds the argument 13 (instruction: `li a2, 13`). Register a1 holds 12 (`li a1, 12`, which is the result of f(8) + 1), and register a0 holds the pointer to the format string.
+
+2. Where is the call to function f in the assembly code for main? Where is the call to g? (Hint: the compiler may inline functions.)
+Answer:
+There is no call instruction to either function f or function g in the assembly code for main. The compiler optimized the calls by inlining both g and f directly at compile time. Since g(8) returns 8 + 3 = 11, and f(8) returns 11, f(8) + 1 equals 12, which the compiler computed statically and loaded directly into register a1 using `li a1, 12` at address 0x2e.
+
+3. At what address is the function printf located?
+Answer:
+The function printf is located at address 0x0000000000000746 (0x746). This is indicated in the assembly dump by the instruction `38: 70e000ef jal 746 <printf>` and the definition at label `0000000000000746 <printf>:`.
+
+4. What value is in the register ra just after the jalr to printf in main?
+Answer:
+The value in register ra immediately after the jal to printf in main is 0x000000000000003c (0x3c). This is the address of the next instruction following the call (at address 0x38 + 4 = 0x3c, where `li a0, 0` resides).
+
+5. Run the following code:
+unsigned int i = 0x00646c72;
+printf("H%x Wo%s", 57616, (char *) &i);
+What is the output?
+If RISC-V were instead big-endian, what would you set i to in order to yield the same output? Would you need to change 57616 to a different value?
+Answer:
+The output is:
+He110 World
+Explanation:
+- The decimal value 57616 converted to hexadecimal is 0xe110. Hence, "H%x" prints "He110".
+- RISC-V is little-endian, meaning least significant bytes are stored at lower memory addresses. The 32-bit unsigned integer 0x00646c72 is laid out in byte memory order starting at &i as:
+  Byte 0 (lowest address): 0x72 -> ASCII 'r'
+  Byte 1:                  0x6c -> ASCII 'l'
+  Byte 2:                  0x64 -> ASCII 'd'
+  Byte 3 (highest address): 0x00 -> null terminator '\0'
+  When printf interprets &i as a string pointer with "%s", it reads bytes starting from byte 0 until the null terminator, producing "rld". Concatenated with " Wo", this produces " World". Combined with the earlier part, the complete output is "He110 World".
+If RISC-V were instead big-endian:
+- In a big-endian architecture, the most significant byte is stored at the lowest memory address. To produce the same byte order in memory ('r' = 0x72, 'l' = 0x6c, 'd' = 0x64, '\0' = 0x00 at byte indices 0, 1, 2, 3), i would need to be set to 0x726c6400.
+- No, 57616 would not need to be changed to a different value. 57616 is passed as an integer value to %x, which converts the numerical value to its hexadecimal character representation; it does not depend on memory endianness.
+
+6. In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen?
+printf("x=%d y=%d", 3);
+Answer:
+A garbage/unspecified value (whatever value happens to currently reside in register a2) will be printed after 'y='.
+This happens because the RISC-V calling convention specifies that function arguments are passed in registers: the format string is in a0, the first argument (3) is in a1, and a second argument would be expected in a2. Since the call only provided one argument after the format string, register a2 was never loaded with an argument value by the caller. However, because printf encounters a second "%d" specifier in the format string, it reads register a2 anyway according to the calling convention, printing whatever leftover value happens to be in a2.
